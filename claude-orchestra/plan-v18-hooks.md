@@ -1219,18 +1219,22 @@ Copy-Item "$env:USERPROFILE\.claude\settings.json" "$env:USERPROFILE\.claude\set
 
 Test hooks one by one to verify they work:
 
-```bash
+```powershell
+# v19 H-4: PowerShell test commands
+$py = "C:\Users\skyeu\AppData\Local\Programs\Python\Python313\python.exe"
+$hooksDir = "$env:USERPROFILE\.claude\hooks"
+
 # Test 1: agent-router.py (should accept empty stdin)
-echo '{}' | C:\Users\skyeu\AppData\Local\Programs\Python\Python313\python.exe ~/.claude/hooks/agent-router.py
+'{}' | & $py "$hooksDir\agent-router.py"
 
 # Test 2: lint-on-save.py (should skip for non-Python)
-echo '{"file_path": "test.txt"}' | C:\Users\skyeu\AppData\Local\Programs\Python\Python313\python.exe ~/.claude/hooks/lint-on-save.py
+'{"file_path": "test.txt"}' | & $py "$hooksDir\lint-on-save.py"
 
 # Test 3: post-write-orchestrator.py (should run sub-hooks)
-echo '{"file_path": "test.py"}' | C:\Users\skyeu\AppData\Local\Programs\Python\Python313\python.exe ~/.claude/hooks/post-write-orchestrator.py
+'{"file_path": "test.py"}' | & $py "$hooksDir\post-write-orchestrator.py"
 
 # Test 4: post-bash-orchestrator.py
-echo '{"command": "pytest", "exit_code": 1}' | C:\Users\skyeu\AppData\Local\Programs\Python\Python313\python.exe ~/.claude/hooks/post-bash-orchestrator.py
+'{"command": "pytest", "exit_code": 1}' | & $py "$hooksDir\post-bash-orchestrator.py"
 ```
 
 Expected: Each test should return valid JSON without errors.
@@ -1267,8 +1271,9 @@ Get-ChildItem "$env:USERPROFILE\.claude\logs" -ErrorAction SilentlyContinue
 
 Monitor hook execution times:
 
-```bash
-# Add this to any hook for timing (optional):
+```python
+# v19 H-4: This is Python code to add inside hooks (not a shell command)
+# Add this to any hook's main() for timing (optional):
 import time
 start = time.time()
 # ... hook code ...
