@@ -10,6 +10,9 @@ python_files = "test_*.py"
 python_functions = "test_*"
 python_classes = "Test*"
 addopts = "-v"
+markers = [
+    "e2e: End-to-end tests that access real ~/.claude/ files (require ORCHESTRA_E2E=1)",
+]
 
 [tool.ruff]
 line-length = 88

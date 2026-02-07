@@ -34,7 +34,7 @@ class TestDetectProjectDir:
 class TestLoadSettingsProjectDir:
     def test_reads_settings(self, tmp_path, monkeypatch):
         settings = tmp_path / ".claude" / "settings.json"
-        settings.parent.mkdir(parents=True)
+        settings.parent.mkdir(parents=True, exist_ok=True)
         import json
         settings.write_text(json.dumps({"projectDir": str(tmp_path / "myproject")}))
 
