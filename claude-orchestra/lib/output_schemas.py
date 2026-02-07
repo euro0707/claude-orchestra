@@ -80,14 +80,21 @@ def validate_output(data: dict, mode: str) -> dict:
         if field not in data:
             errors.append(f"Missing required field: {field}")
 
-    # Check types
+    # Check types (v20 Phase1-L1: reject bool where int expected, check severity values)
     for field, expected_type in schema.get("types", {}).items():
         if field in data:
+            value = data[field]
             if isinstance(expected_type, tuple):
-                if not isinstance(data[field], expected_type):
-                    errors.append(f"Field '{field}' expected {expected_type}, got {type(data[field])}")
-            elif not isinstance(data[field], expected_type):
-                errors.append(f"Field '{field}' expected {expected_type.__name__}, got {type(data[field]).__name__}")
+                # For tuple types like (int, float), also reject bool
+                if isinstance(value, bool) and bool not in expected_type:
+                    errors.append(f"Field '{field}' expected {expected_type}, got bool")
+                elif not isinstance(value, expected_type):
+                    errors.append(f"Field '{field}' expected {expected_type}, got {type(value)}")
+            elif expected_type is int and isinstance(value, bool):
+                # v20 Phase1-L1: bool is subclass of int in Python, reject explicitly
+                errors.append(f"Field '{field}' expected int, got bool")
+            elif not isinstance(value, expected_type):
+                errors.append(f"Field '{field}' expected {expected_type.__name__}, got {type(value).__name__}")
 
     # v13 C-6: Validate confidence range (1-10)
     if "confidence" in data and isinstance(data["confidence"], (int, float)):

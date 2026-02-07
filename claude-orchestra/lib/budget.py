@@ -38,26 +38,44 @@ class ConcurrencyLimitReached(Exception):
 def _file_lock(f, exclusive: bool = True) -> None:
     """
     v13 C-4, v17 G-2: OS-level file lock for inter-process safety.
-    v17: Windows uses LK_LOCK (blocking) instead of LK_NBLCK (non-blocking).
-    v18 I-6: Lock 1024 bytes instead of 1 byte to avoid Windows locking issues.
+    v20 Phase1-M2: Use separate .lock file on Windows to avoid NUL-extension
+    of short JSON files by msvcrt.locking range locks.
     """
     import sys
     if sys.platform == "win32":
         import msvcrt
-        msvcrt.locking(f.fileno(), msvcrt.LK_LOCK if exclusive else msvcrt.LK_UNLCK, 1024)
+        lock_fh = _get_lock_file(f)
+        msvcrt.locking(lock_fh.fileno(), msvcrt.LK_LOCK if exclusive else msvcrt.LK_UNLCK, 1)
     else:
         import fcntl
         fcntl.flock(f.fileno(), fcntl.LOCK_EX if exclusive else fcntl.LOCK_UN)
 
 
+# v20 Phase1-M2: Separate .lock file for Windows to prevent JSON corruption
+_LOCK_FILE_PATH = _BUDGET_FILE.parent / "budget_session.lock"
+_lock_file_handles: dict = {}
+
+
+def _get_lock_file(f) -> object:
+    """Get or create a separate lock file handle for Windows."""
+    if f.fileno() not in _lock_file_handles:
+        _LOCK_FILE_PATH.parent.mkdir(parents=True, exist_ok=True)
+        lf = open(_LOCK_FILE_PATH, "w")
+        _lock_file_handles[f.fileno()] = lf
+    return _lock_file_handles[f.fileno()]
+
+
 def _file_unlock(f) -> None:
-    """v13 C-4: Release file lock."""
+    """v13 C-4, v20 Phase1-M2: Release file lock."""
     import sys
     if sys.platform == "win32":
         import msvcrt
         try:
-            f.seek(0)
-            msvcrt.locking(f.fileno(), msvcrt.LK_UNLCK, 1024)
+            lock_fh = _lock_file_handles.pop(f.fileno(), None)
+            if lock_fh:
+                lock_fh.seek(0)
+                msvcrt.locking(lock_fh.fileno(), msvcrt.LK_UNLCK, 1)
+                lock_fh.close()
         except Exception:
             pass
     else:

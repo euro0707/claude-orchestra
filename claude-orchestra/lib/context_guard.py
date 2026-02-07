@@ -24,8 +24,8 @@ _SECRET_PATTERNS = [
     # GitHub/GitLab tokens
     re.compile(r'gh[pousr]_[A-Za-z0-9_]{36,}'),
     re.compile(r'glpat-[\w\-]{20,}'),
-    # Generic private keys
-    re.compile(r'-----BEGIN (?:RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----'),
+    # Generic private keys (v20 Phase1-H1: match entire BEGIN...END block, not just header)
+    re.compile(r'-----BEGIN [^-]*PRIVATE KEY-----.*?-----END [^-]*PRIVATE KEY-----', re.DOTALL),
     # Generic secrets/tokens/passwords
     re.compile(r'(?:secret|token|password|passwd|pwd)\s*[:=]\s*["\']?[^\s"\']{8,}', re.IGNORECASE),
     # JWT
@@ -270,7 +270,13 @@ def guard_context(content: str, source_files: list[str] = None) -> str:
                 "ORCHESTRA_STRICT_ORIGIN is enabled. source_files must be provided "
                 "for all content sent to external agents."
             )
-        # For "block" and "redact" policies without strict mode, proceed with content-only scanning
+        # v20 Phase1-M1: Under default "redact" policy with unknown origin,
+        # still scan content for secrets (Step 5/6 below handle this).
+        # Log warning that allowlist/blocked-file checks are skipped.
+        _audit_log("unknown_origin_warning",
+                   f"No source_files provided, policy={policy}. "
+                   "File allowlist/blocklist checks skipped. "
+                   "Set ORCHESTRA_CONSENT_POLICY=require_allowlist or provide source_files.")
         _audit_log("unknown_origin", f"No source_files provided, policy={policy}")
 
     # Step 3: Enforce allowed base directories (v13 C-1, v16 F-1, v17 G-1: per-call)

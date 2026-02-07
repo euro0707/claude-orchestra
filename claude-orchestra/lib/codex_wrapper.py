@@ -123,7 +123,7 @@ def call_codex(mode: str, context: str, timeout: int = 300, source_files: list[s
             output_path = out_tmp.name
             out_tmp.close()
 
-            subprocess.run(
+            stage2_result = subprocess.run(
                 [
                     node_path,
                     codex_js_path,
@@ -134,10 +134,19 @@ def call_codex(mode: str, context: str, timeout: int = 300, source_files: list[s
                     "-",
                 ],
                 input=prompt,
+                capture_output=True,
                 timeout=timeout,
                 shell=False,
                 encoding="utf-8",
             )
+            # v20 Phase1-L2: Check returncode and stderr for Stage 2
+            if stage2_result.returncode != 0:
+                return {
+                    "success": False,
+                    "error": f"codex stage2 exited with code {stage2_result.returncode}",
+                    "method": "tempfile",
+                    "stderr": (stage2_result.stderr or "")[:500],
+                }
 
             output_file = Path(output_path)
             if output_file.exists() and output_file.stat().st_size > 0:
