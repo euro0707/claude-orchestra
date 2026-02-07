@@ -1,20 +1,21 @@
 ---
 date: "2026-02-07"
 type: codex-review
-target: Phase 1 Library Foundation (12 modules)
+target: Phase 1 Library Foundation (12 modules) + Phase 2 Hooks Deploy
 result: APPROVED
-score: 8/10
-status: re-reviewed
+score: 9/10
+status: final-review
 re-review-date: "2026-02-07"
 re-review-by: claude-opus-4-6
+phase2-commit: 26c50f4
 ---
 
-# Phase 1 Codex Review - 2026-02-07
+# Phase 1 + Phase 2 Review - 2026-02-07
 
-## Result: APPROVED (Score: 8/10)
+## Result: APPROVED (Score: 9/10)
 
-> **Re-review (2026-02-07)**: 6件の修正を検証し APPROVED に更新。
-> M-1 は Phase 2 での source_files 必須化を前提とした暫定対策として承認。
+> **Final review (2026-02-07)**: Phase 1 全6件修正 + Phase 2 hooks デプロイ + M-1 enforcement 強化を検証。
+> M-1 は `ORCHESTRA_STRICT_ORIGIN=1` デフォルトにより完全 enforcement 済み。
 
 ## Issues (6件)
 
@@ -40,7 +41,7 @@ re.compile(r'-----BEGIN [^-]*PRIVATE KEY-----.*?-----END [^-]*PRIVATE KEY-----',
 - **File**: `lib/context_guard.py`
 - **Problem**: `source_files` 未指定時にデフォルト `redact` ポリシーで allowlist/blocked file チェックがスキップ
 - **Fix**: `require_allowlist` をデフォルトにするか、Phase 2 Hooks で必ず `source_files` を渡す
-- **Status**: [x] FIXED (v20 Phase1-M1: audit warning log追加、Phase 2でsource_files必須化予定)
+- **Status**: [x] FIXED + ENFORCED (v20 Phase1-M1 → bootstrap.py ORCHESTRA_STRICT_ORIGIN=1)
 
 #### M-2: budget.py - Windows ファイルロックによる JSON 破損
 - **File**: `lib/budget.py`
@@ -76,7 +77,7 @@ re.compile(r'-----BEGIN [^-]*PRIVATE KEY-----.*?-----END [^-]*PRIVATE KEY-----',
 4. **M-3** (中) → 互換性: WSL ユーザー向け
 5. **L-1, L-2** (低) → 品質改善
 
-## Re-review 結果 (2026-02-07)
+## Re-review 結果 (2026-02-07) — 初回
 
 ### 検証サマリ
 
@@ -89,18 +90,61 @@ re.compile(r'-----BEGIN [^-]*PRIVATE KEY-----.*?-----END [^-]*PRIVATE KEY-----',
 | L-1 | PASS | bool 明示排除 + severity_values 検証追加 |
 | L-2 | PASS | returncode チェック + stderr キャプチャ追加 |
 
-### 軽微な指摘（修正不要）
+---
 
-1. **M-1 重複ログ**: `context_guard.py:276-280` で `unknown_origin_warning` と `unknown_origin` の2エントリが記録される。1つに統合推奨（Phase 2 で整理可）
-2. **M-1 暫定対策**: audit log のみで実際の enforce はしていない。Phase 2 で `source_files` 必須化されるまでのリスクを認識した上で承認
+## Final Review 結果 (2026-02-07) — Phase 2 デプロイ後
+
+### Phase 1 修正 再検証
+
+| Issue | 判定 | 備考 |
+|-------|------|------|
+| H-1 | PASS | 変更なし。引き続き有効 |
+| M-1 | **PASS (強化済み)** | `bootstrap.py:60-61` で `ORCHESTRA_STRICT_ORIGIN=1` デフォルト設定。`source_files` 未提供で `ContextGuardError` |
+| M-2 | PASS | 変更なし |
+| M-3 | PASS | 変更なし |
+| L-1 | PASS | 変更なし |
+| L-2 | PASS | 変更なし |
+
+### M-1 Enforcement 検証
+
+- `bootstrap.py:60-61`: `ORCHESTRA_STRICT_ORIGIN` 未設定時にデフォルト `"1"` を設定
+- `context_guard.py:265-272`: `strict_origin == "1"` かつ `source_files` なしで `ContextGuardError`
+- bootstrap を import する全 hook が自動的に strict モード（漏れなし）
+- `os.environ.get()` で既存設定を上書きしない（オプトアウト可能）
+
+**エッジケース:**
+- `guard_context("content")` → ContextGuardError (PASS)
+- `guard_context("content", source_files=[])` → ContextGuardError (PASS)
+- `guard_context("content", source_files=["file.py"])` → 正常通過 (PASS)
+
+### Phase 2 Hooks デプロイ検証
+
+**デプロイ状態:**
+- 10 hook scripts → `~/.claude/hooks/` (デプロイ済み)
+- settings.json → 7イベントにhook設定完了
+- lib → junction リンクで `claude-orchestra/lib/` と同期
+
+**Hook 安全性:**
+- 全10 hook が「サジェスト専用」（Codex を直接呼ばない）
+- 全 hook に try/except フェイルセーフ
+- stdin JSON → stdout JSON のパススルー設計
+
+### 軽微な指摘（修正任意）
+
+1. **Stop hook Python パス**: `settings.json:100` で `python`（PATH依存）。他の hook は絶対パス。統一推奨
+2. **到達不能コード**: `context_guard.py:276-280` の `unknown_origin_warning` ログは `ORCHESTRA_STRICT_ORIGIN=1` 環境では line 266-272 で先にブロックされるため到達しない
 
 ### リグレッションリスク
 
-- なし。各修正は対象モジュール内で完結し、既存の動作を壊さない
+- なし。Phase 1 修正は対象モジュール内で完結
+- Phase 2 hooks は全てサジェスト専用で副作用なし
 - 非 Windows パス（fcntl）は未変更
 
 ## 次のステップ
 
 1. ~~上記6件を修正~~  (完了)
-2. ~~Codex re-review で APPROVED 取得~~  (完了: 2026-02-07)
-3. Phase 2 (Hooks デプロイ) に進む
+2. ~~Codex re-review で APPROVED 取得~~  (完了: 8/10)
+3. ~~Phase 2 (Hooks デプロイ)~~  (完了: 26c50f4)
+4. ~~M-1 enforcement 強化~~  (完了: ORCHESTRA_STRICT_ORIGIN=1)
+5. ~~Final review APPROVED~~  (完了: 9/10)
+6. 運用開始 — hooks の動作確認とパフォーマンスモニタリング

@@ -273,11 +273,10 @@ def guard_context(content: str, source_files: list[str] = None) -> str:
         # v20 Phase1-M1: Under default "redact" policy with unknown origin,
         # still scan content for secrets (Step 5/6 below handle this).
         # Log warning that allowlist/blocked-file checks are skipped.
-        _audit_log("unknown_origin_warning",
+        _audit_log("unknown_origin",
                    f"No source_files provided, policy={policy}. "
                    "File allowlist/blocklist checks skipped. "
                    "Set ORCHESTRA_CONSENT_POLICY=require_allowlist or provide source_files.")
-        _audit_log("unknown_origin", f"No source_files provided, policy={policy}")
 
     # Step 3: Enforce allowed base directories (v13 C-1, v16 F-1, v17 G-1: per-call)
     if source_files is not None and len(source_files) > 0:
