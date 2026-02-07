@@ -140,6 +140,39 @@ re.compile(r'-----BEGIN [^-]*PRIVATE KEY-----.*?-----END [^-]*PRIVATE KEY-----',
 - Phase 2 hooks は全てサジェスト専用で副作用なし
 - 非 Windows パス（fcntl）は未変更
 
+---
+
+## Codex Phase 3 Review (2026-02-07)
+
+### Result: APPROVED (Score: 8/10) — 2 medium, 1 low
+
+| # | Severity | File | 指摘 | 対応 |
+|---|----------|------|------|------|
+| CM-1 | medium | `bootstrap.py:56` | env var `"true"/"yes"` 等で enforcement が意図せず無効化 | FIXED: truthy/falsy 正規化 |
+| CM-2 | medium | `context_guard.py:266` | bootstrap なしで `guard_context()` 呼出時にバイパス | FIXED: デフォルト `"1"` (fail closed) |
+| CL-1 | low | `context_guard.py:274` | audit event 名変更でダッシュボード影響の可能性 | ACCEPTED: ダッシュボード未構築のため影響なし |
+
+### CM-1 修正内容 (bootstrap.py)
+
+```python
+# Before: if not os.environ.get("ORCHESTRA_STRICT_ORIGIN"):
+# After: truthy/falsy normalization
+_strict_raw = os.environ.get("ORCHESTRA_STRICT_ORIGIN", "")
+if _strict_raw.lower() in ("", "1", "true", "yes", "on"):
+    os.environ["ORCHESTRA_STRICT_ORIGIN"] = "1"
+elif _strict_raw.lower() in ("0", "false", "no", "off"):
+    os.environ["ORCHESTRA_STRICT_ORIGIN"] = "0"
+else:
+    os.environ["ORCHESTRA_STRICT_ORIGIN"] = "1"  # fail closed
+```
+
+### CM-2 修正内容 (context_guard.py)
+
+```python
+# Before: os.environ.get("ORCHESTRA_STRICT_ORIGIN", "0") == "1"
+# After:  os.environ.get("ORCHESTRA_STRICT_ORIGIN", "1") == "1"  # fail closed
+```
+
 ## 次のステップ
 
 1. ~~上記6件を修正~~  (完了)
@@ -147,4 +180,5 @@ re.compile(r'-----BEGIN [^-]*PRIVATE KEY-----.*?-----END [^-]*PRIVATE KEY-----',
 3. ~~Phase 2 (Hooks デプロイ)~~  (完了: 26c50f4)
 4. ~~M-1 enforcement 強化~~  (完了: ORCHESTRA_STRICT_ORIGIN=1)
 5. ~~Final review APPROVED~~  (完了: 9/10)
-6. 運用開始 — hooks の動作確認とパフォーマンスモニタリング
+6. ~~Codex Phase 3 review~~  (完了: APPROVED 8/10, CM-1/CM-2 修正済み)
+7. 運用開始 — hooks の動作確認とパフォーマンスモニタリング

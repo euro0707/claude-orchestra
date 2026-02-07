@@ -57,7 +57,14 @@ def _load_settings_project_dir() -> str | None:
 
 # M-1 Phase 2 enforcement: require source_files for all external transmissions
 # When ORCHESTRA_STRICT_ORIGIN=1, guard_context() blocks calls without source_files.
-if not os.environ.get("ORCHESTRA_STRICT_ORIGIN"):
+# CM-1 fix: Normalize truthy/falsy env var values to "1"/"0"
+_strict_raw = os.environ.get("ORCHESTRA_STRICT_ORIGIN", "")
+if _strict_raw.lower() in ("", "1", "true", "yes", "on"):
+    os.environ["ORCHESTRA_STRICT_ORIGIN"] = "1"
+elif _strict_raw.lower() in ("0", "false", "no", "off"):
+    os.environ["ORCHESTRA_STRICT_ORIGIN"] = "0"
+else:
+    # Unknown value: fail closed (default to enabled)
     os.environ["ORCHESTRA_STRICT_ORIGIN"] = "1"
 
 if not os.environ.get("CLAUDE_PROJECT_DIR"):

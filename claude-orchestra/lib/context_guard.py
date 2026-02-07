@@ -262,7 +262,8 @@ def guard_context(content: str, source_files: list[str] = None) -> str:
                 "Provide explicit file paths for content being sent to external agents."
             )
         # v17 H-1: Strict origin mode — block unknown origin even under redact
-        strict_origin = os.environ.get("ORCHESTRA_STRICT_ORIGIN", "0") == "1"
+        # CM-2 fix: Default to "1" (fail closed) when env var is unset
+        strict_origin = os.environ.get("ORCHESTRA_STRICT_ORIGIN", "1") == "1"
         if strict_origin:
             _audit_log("blocked_strict_origin",
                        f"source_files not provided, ORCHESTRA_STRICT_ORIGIN=1, policy={policy}")
