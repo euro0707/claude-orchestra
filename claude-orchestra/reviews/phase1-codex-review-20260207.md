@@ -187,6 +187,34 @@ else:
 | P4-4 | medium | lib 全体 | テストゼロ | ACCEPTED: Phase 5 以降で対応 |
 | P4-5 | low | `__init__.py:10` | import 時の bootstrap 副作用 | ACCEPTED: hooks は直接 import bootstrap するため影響限定的 |
 
+---
+
+## Codex Phase 5 Review (2026-02-07)
+
+### Result: NOT APPROVED → FIXED → 226 tests pass (Score: 7/10) — 1 high, 4 medium
+
+| # | Severity | File | 指摘 | 対応 |
+|---|----------|------|------|------|
+| P5-1 | high | `conftest.py:10` | テストが `~/.claude/lib/` から import → 非hermetic | FIXED: `Path(__file__).parent.parent / "lib"` に変更 |
+| P5-2 | medium | `test_hooks.py:9` | Hook テストが `~/.claude/hooks/` の実スクリプト依存 | FIXED: `pytestmark = pytest.mark.skipif` で hooks 不在時スキップ |
+| P5-3 | medium | `conftest.py:28` | `budget.py` の module-level env var timing | FIXED: `mock_budget_file` fixture で `DEFAULT_TOKEN_BUDGET/DEFAULT_MAX_CONCURRENT` を monkeypatch |
+| P5-4 | medium | `test_cli_finder.py`, `test_codex_wrapper.py` | モック戦略が過度に寛容 | FIXED: 実ファイルシステム使用、アサーション強化 |
+| P5-5 | medium | `test_context_guard.py` | セキュリティテスト不足 | FIXED: ALLOWED_DIRS パース、無効ポリシー、パストラバーサル、.env multi-suffix テスト追加 (8 tests) |
+
+### P5-1 修正で発見された既存テストの問題
+
+import パスを `~/.claude/lib/` からリポジトリ `lib/` に修正したことで、リポジトリの最新コードが正しくテストされ、4件の既存テスト不整合が発見された:
+
+1. `test_private_key`: H-1 修正で BEGIN...END ブロック全体が必要 → テストデータ更新
+2. `test_json_response`, `test_raw_text_response`, `test_empty_output`: P4-3 の returncode チェック追加で MagicMock に `returncode=0` が必要 → テスト修正
+
+**P5-1 の指摘が正しかったことの証拠** — `~/.claude/lib/` の古いコードでは通っていたが、リポジトリコードでは失敗していた。
+
+### テスト結果
+
+- 修正前: 218 tests (non-hermetic)
+- 修正後: **226 tests, all pass (2.72s)** (+8 new security tests)
+
 ## 次のステップ
 
 1. ~~上記6件を修正~~  (完了)
@@ -196,4 +224,5 @@ else:
 5. ~~Final review APPROVED~~  (完了: 9/10)
 6. ~~Codex Phase 3 review~~  (完了: APPROVED 8/10, CM-1/CM-2 修正済み)
 7. ~~Codex Phase 4 review~~  (完了: APPROVED 6/10, P4-1/P4-2/P4-3 修正済み)
-8. 運用開始 — hooks の動作確認とパフォーマンスモニタリング
+8. ~~Codex Phase 5 review~~  (完了: 7/10, P5-1~P5-5 全修正, 226 tests pass)
+9. 運用開始 — hooks の動作確認とパフォーマンスモニタリング
