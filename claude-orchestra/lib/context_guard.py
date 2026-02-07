@@ -44,7 +44,7 @@ _BLOCKED_EXTENSIONS = {
 
 # File patterns that should never be sent
 _BLOCKED_PATTERNS = [
-    re.compile(r'\.env(\.\w+)?$'),
+    re.compile(r'\.env(\.\w+)*$'),  # P4-1: match .env.production.local etc.
     re.compile(r'credentials\.json$', re.IGNORECASE),
     re.compile(r'serviceaccount.*\.json$', re.IGNORECASE),
     re.compile(r'.*_rsa$'),

@@ -47,8 +47,13 @@ def call_codex(mode: str, context: str, timeout: int = 300, source_files: list[s
     Returns:
         dict with keys: success, method, and mode-specific results
     """
-    node_path = find_node()
-    codex_js_path = find_codex_js()
+    # P4-2: Wrap path resolution to return structured error instead of raising
+    try:
+        node_path = find_node()
+        codex_js_path = find_codex_js()
+    except FileNotFoundError as e:
+        return {"success": False, "error": "not_installed", "message": str(e)}
+
     prompt = f"[mode: {mode}]\n{context}"
 
     # v15 E-1: Apply context guard with source_files provenance

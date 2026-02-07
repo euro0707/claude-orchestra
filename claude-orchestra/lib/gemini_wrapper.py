@@ -74,6 +74,14 @@ def call_gemini(query: str, timeout: int = 120, source_files: list[str] = None) 
             encoding="utf-8",
             shell=False,
         )
+        # P4-3: Check returncode before treating output as success
+        if result.returncode != 0:
+            return {
+                "success": False,
+                "error": f"gemini exited with code {result.returncode}",
+                "method": "gemini",
+                "stderr": (result.stderr or "")[:500],
+            }
         if result.stdout.strip():
             # Try JSON parse first
             try:

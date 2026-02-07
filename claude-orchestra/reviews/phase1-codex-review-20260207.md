@@ -173,6 +173,20 @@ else:
 # After:  os.environ.get("ORCHESTRA_STRICT_ORIGIN", "1") == "1"  # fail closed
 ```
 
+---
+
+## Codex Phase 4 Review (2026-02-07)
+
+### Result: APPROVED (Score: 6/10) — 4 medium, 1 low
+
+| # | Severity | File | 指摘 | 対応 |
+|---|----------|------|------|------|
+| P4-1 | medium | `context_guard.py:47` | `.env.production.local` がブロックされない | FIXED: regex `(\.\w+)?` → `(\.\w+)*` |
+| P4-2 | medium | `codex_wrapper.py:50` | `find_node()`/`find_codex_js()` が try/except 外 | FIXED: try/except で構造化エラー返却 |
+| P4-3 | medium | `gemini_wrapper.py:68` | returncode 未チェック | FIXED: 非ゼロで failure 返却 |
+| P4-4 | medium | lib 全体 | テストゼロ | ACCEPTED: Phase 5 以降で対応 |
+| P4-5 | low | `__init__.py:10` | import 時の bootstrap 副作用 | ACCEPTED: hooks は直接 import bootstrap するため影響限定的 |
+
 ## 次のステップ
 
 1. ~~上記6件を修正~~  (完了)
@@ -181,4 +195,5 @@ else:
 4. ~~M-1 enforcement 強化~~  (完了: ORCHESTRA_STRICT_ORIGIN=1)
 5. ~~Final review APPROVED~~  (完了: 9/10)
 6. ~~Codex Phase 3 review~~  (完了: APPROVED 8/10, CM-1/CM-2 修正済み)
-7. 運用開始 — hooks の動作確認とパフォーマンスモニタリング
+7. ~~Codex Phase 4 review~~  (完了: APPROVED 6/10, P4-1/P4-2/P4-3 修正済み)
+8. 運用開始 — hooks の動作確認とパフォーマンスモニタリング
